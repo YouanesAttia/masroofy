@@ -183,10 +183,19 @@ export default function Insights() {
     setSavingGoal(false); setGoalInput("");
   };
 
-  const limit        = Number(budget?.monthly_limit ?? 0);
-  const saved        = Math.max(0, limit - totalThisMonth);
-  const goalTarget   = savingsGoal ? Number(savingsGoal.target_amount) : 0;
-  const goalProgress = goalTarget > 0 ? Math.min((saved / goalTarget) * 100, 100) : 0;
+const limit = Number(budget?.monthly_limit ?? 0);
+
+// Projected spend by end of month based on daily average so far
+const daysPassed   = todayDayOfMonth();
+const daysTotal    = daysInCurrentMonth();
+const dailyAvg     = daysPassed > 0 ? totalThisMonth / daysPassed : 0;
+const projectedSpend = Math.round(dailyAvg * daysTotal);
+
+// Projected savings = what you'll have left at month end at current pace
+const projectedSaved = Math.max(0, limit - projectedSpend);
+
+const goalTarget   = savingsGoal ? Number(savingsGoal.target_amount) : 0;
+const goalProgress = goalTarget > 0 ? Math.min((projectedSaved / goalTarget) * 100, 100) : 0;
   const now          = new Date();
   const monthLabel   = formatMonthYear(now.getFullYear(), now.getMonth() + 1);
 
@@ -273,7 +282,7 @@ export default function Insights() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">{t('goalTarget')}: {formatEGP(goalTarget)}</span>
-                  <span className="font-bold text-teal-600 dark:text-teal-400">{t('goalSaved')}: {formatEGP(saved)}</span>
+                  <span className="font-bold text-teal-600 dark:text-teal-400">{t('goalSaved')}: {formatEGP(projectedSaved)}</span>
                 </div>
                 <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                   <div className="h-3 rounded-full transition-all duration-700"
@@ -281,7 +290,9 @@ export default function Insights() {
                 </div>
                 <div className="flex justify-between text-xs text-gray-400">
                   <span>{Math.round(goalProgress)}{t('goalProgress')}</span>
-                  {goalProgress >= 100 && <span className="text-green-500 font-semibold">{t('goalAchieved')}</span>}
+                  {goalProgress >= 100 && projectedSpend > 0 && (
+                  <span className="text-green-500 font-semibold">{t('goalAchieved')}</span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-400 text-center">{monthLabel}</p>
               </div>
